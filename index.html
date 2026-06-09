@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fast-Roaming Wi-Fi Access Point — Built From Scratch</title>
+<meta name="description" content="An original from-scratch build of a fast-roaming Wi-Fi testbed: two virtual access points running hostapd with 802.11r fast BSS transition, so a moving client hops between them without dropping its connection." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --accent:#ea580c; --accent-soft:#fdebe0; --ink:#16201f; --muted:#5d6b69;
+    --line:#dfe5e3; --bg:#fbfcfb; --card:#ffffff;
+    --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:0 28px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:.1em .4em;border-radius:4px;color:#c2410c}
+  h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.15;letter-spacing:-.01em}
+  /* Header */
+  header.hero{padding:88px 0 56px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 22px}
+  h1{font-size:clamp(2.6rem,6vw,4.1rem);margin:0 0 18px}
+  .lede{font-size:1.22rem;color:var(--muted);max-width:62ch;margin:0 0 28px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;font-size:.82rem}
+  .chip{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--muted);background:var(--card)}
+  /* Sections */
+  section{padding:54px 0;border-bottom:1px solid var(--line)}
+  .kicker{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h2{font-size:clamp(1.7rem,3.4vw,2.3rem);margin:0 0 20px}
+  h3{font-size:1.2rem;margin:0 0 6px}
+  p{margin:0 0 18px;max-width:68ch}
+  .muted{color:var(--muted)}
+  /* Stack grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:8px}
+  .tool{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .tool .t{font-family:var(--mono);font-size:.78rem;color:var(--accent);letter-spacing:.04em;margin-bottom:8px}
+  .tool h3{font-size:1.05rem;font-family:var(--sans);font-weight:600;margin-bottom:6px}
+  .tool p{font-size:.92rem;color:var(--muted);margin:0}
+  /* Pipeline / modules */
+  ol.flow{counter-reset:s;list-style:none;padding:0;margin:24px 0 0}
+  ol.flow li{position:relative;padding:18px 0 18px 56px;border-top:1px solid var(--line)}
+  ol.flow li:before{counter-increment:s;content:counter(s,decimal-leading-zero);position:absolute;left:0;top:18px;font-family:var(--mono);font-size:.8rem;color:var(--accent);border:1px solid var(--line);border-radius:8px;width:38px;height:38px;display:grid;place-items:center;background:var(--card)}
+  ol.flow li h3{font-family:var(--sans);font-size:1.02rem;font-weight:600;margin:0 0 4px}
+  ol.flow li p{margin:0;font-size:.93rem;color:var(--muted)}
+  .tag{display:inline-block;font-family:var(--mono);font-size:.68rem;padding:2px 7px;border-radius:5px;margin-left:8px;vertical-align:middle}
+  .tag.on{background:#e6f7ec;color:#1c7a43}
+  .tag.off{background:#fdecea;color:#b23b2c}
+  /* Callout */
+  .callout{background:var(--accent-soft);border:1px solid #f5cdb6;border-radius:14px;padding:24px 26px;margin-top:8px}
+  .callout p:last-child{margin:0}
+  /* Reflection list */
+  ul.learn{list-style:none;padding:0;margin:8px 0 0}
+  ul.learn li{padding:14px 0 14px 30px;border-top:1px solid var(--line);position:relative;color:var(--muted);max-width:68ch}
+  ul.learn li:before{content:"→";position:absolute;left:0;color:var(--accent);font-family:var(--mono)}
+  ul.learn li b{color:var(--ink);font-weight:600}
+  /* Footer */
+  footer{padding:48px 0 80px}
+  .credit{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px}
+  .credit .k{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  footer .fine{font-size:.8rem;color:var(--muted);margin-top:22px;text-align:center}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">From-Scratch Build · Networking</p>
+    <h1>Fast-Roaming Wi-Fi Access Point</h1>
+    <p class="lede">Two software access points sharing one network name, tuned so a moving client can jump between them in tens of milliseconds instead of seconds. Rebuilt from scratch to learn how 802.11r fast roaming actually works at the configuration level.</p>
+    <div class="meta">
+      <span class="chip">hostapd</span><span class="chip">802.11r</span><span class="chip">802.11i</span>
+      <span class="chip">Fast BSS Transition</span><span class="chip">RADIUS</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">What it is</p>
+    <h2>One network, two access points, no dropouts</h2>
+    <p>When a Wi-Fi device moves away from one access point and toward another that advertises the <b>same network name</b>, it has to switch over — that switch is called roaming. Done the ordinary way it means disconnecting, scanning, re-authenticating and renegotiating encryption keys, and the gap can stall a video call or a live data stream for a second or more.</p>
+    <p>This build is a small testbed that makes that switch nearly seamless. Two virtual access points run on Linux and share one network, and a roaming client can hand off between them in tens of milliseconds. I built it to answer a concrete question: what exactly has to be configured for a connection to survive a handoff that a user never notices?</p>
+    <div class="callout">
+      <p><b>The core idea I wanted to learn:</b> most of the time in a normal roam is spent re-doing security from scratch. <i>Fast BSS transition</i> pre-arranges the new keys ahead of time and folds the key exchange into the same frames that join the new access point — so the handoff costs milliseconds, not seconds.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">The stack</p>
+    <h2>Tools under the hood</h2>
+    <p class="muted">The point of this rebuild was the configuration, not custom code. Here is what each component does in the testbed.</p>
+    <div class="grid">
+      <div class="tool"><div class="t">access point</div><h3>hostapd</h3><p>The user-space daemon that turns an ordinary Wi-Fi card into an access point. Its config file defines the network name, channel, security and the roaming behaviour.</p></div>
+      <div class="tool"><div class="t">fast roaming</div><h3>802.11r (FT)</h3><p>Fast BSS Transition. Pre-computes the keys a client will need at the next access point so the handoff skips the slow re-authentication.</p></div>
+      <div class="tool"><div class="t">pre-auth</div><h3>802.11i</h3><p>The WPA2 security framework, with pre-authentication so a client can prepare for the next access point while still attached to the current one.</p></div>
+      <div class="tool"><div class="t">virtual APs</div><h3>Two vAPs</h3><p>Two access points sharing the same network identity, each with its own identifier, so the client perceives one continuous network as it moves.</p></div>
+      <div class="tool"><div class="t">identity</div><h3>RADIUS server</h3><p>An optional central authentication server for the enterprise path, deciding who is allowed to connect and feeding the access points their answers.</p></div>
+      <div class="tool"><div class="t">client</div><h3>Supplicant</h3><p>The configuration on the roaming device — credentials and roaming triggers — so it knows when and how to jump to the stronger access point.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Architecture</p>
+    <h2>The testbed, node by node</h2>
+    <p>The scenario is three machines: two access points and one roaming client. Most of the build is wiring and configuration; the heavyweight enterprise authentication path I treated as optional.</p>
+    <ol class="flow">
+      <li><h3>Access Point 1 <span class="tag on">built</span></h3><p>A virtual AP running the access-point daemon with security and fast-transition turned on — the client's starting point.</p></li>
+      <li><h3>Access Point 2 <span class="tag on">built</span></h3><p>A second virtual AP advertising the same network name and sharing the fast-transition keying material so a handoff is possible.</p></li>
+      <li><h3>Shared FT keys <span class="tag on">built</span></h3><p>The mobility-domain and key settings both access points must agree on, so one can vouch for a client the other already knows.</p></li>
+      <li><h3>Roaming client <span class="tag on">built</span></h3><p>A device configured with credentials and roaming thresholds, set to move between the two access points.</p></li>
+      <li><h3>Pre-shared-key path <span class="tag on">built</span></h3><p>The simplest security mode — a single passphrase — which already gets fast transition working without any server.</p></li>
+      <li><h3>Enterprise RADIUS path <span class="tag off">optional</span></h3><p>A central server with a backing database for per-user logins. Wired conceptually, left as the stretch goal in this build.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">How it runs</p>
+    <h2>From a slow roam to a fast one</h2>
+    <p>The whole exercise is about shaving steps off the handoff. A normal roam walks through every stage; fast transition collapses several of them:</p>
+    <ul class="learn">
+      <li><b>Ordinary roam:</b> scan, disconnect, change channel, authenticate, run the full security handshake, then reconnect — service pauses the whole time.</li>
+      <li><b>With 802.11i pre-authentication:</b> the client prepares the next access point's session while still connected to the current one, so less work remains at the moment of switching.</li>
+      <li><b>With 802.11r fast transition:</b> the key exchange rides along inside the join frames themselves, cutting the visible interruption to tens of milliseconds.</li>
+    </ul>
+    <p class="muted" style="margin-top:18px">In my rebuild I focused on the pre-shared-key path: bring up both access points with matching network and mobility settings, point a client at them, and watch it hand off cleanly enough to keep a live stream alive across the move.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Reflection</p>
+    <h2>What rebuilding it taught me</h2>
+    <ul class="learn">
+      <li><b>Roaming is mostly a security problem.</b> The radio handoff is quick; what makes a normal roam slow is re-establishing encryption keys from scratch each time.</li>
+      <li><b>hostapd is "an access point in a config file".</b> No custom code — the entire behaviour lives in a handful of carefully set options, which makes the standard tangible.</li>
+      <li><b>Both ends have to agree.</b> Fast transition only works if the two access points share a mobility domain and keys, and the client is told to use them — a coordination problem, not a single setting.</li>
+      <li><b>Milliseconds are the whole point.</b> The difference between a one-second stall and a 40-millisecond blip is exactly what keeps a moving robot or a video call from noticing the handoff.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="credit">
+      <div class="k">About this build</div>
+      <p style="margin:0">An original, from-scratch build by <b>Andrea</b> — written to learn how software access points and the 802.11r fast-roaming standard let a moving client stay connected. Plain HTML/CSS for this showcase page, deployed on GitHub Pages.</p>
+    </div>
+    <p class="fine">Built from scratch by Andrea · one of an ongoing series of learning builds.</p>
+  </div>
+</footer>
+</body>
+</html>
